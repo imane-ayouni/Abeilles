@@ -2,7 +2,6 @@ import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import networkx as nx
 from random import sample,choice
 import math
 
@@ -12,17 +11,20 @@ flowerField = pd.read_excel(r'C:\Users\imane\OneDrive\Desktop\Abeilles\flowers.x
 x = list(flowerField['x'])
 y = list(flowerField['y'])
 
+
+# Obtenir une liste qui contient les positions des fleurs
+
 flowerPositions = {x[i]: y[i] for i in range(len(x))}
 fpos = []
 for key in flowerPositions:
     position = [key, flowerPositions[key]]
     fpos.append(position)
-print(fpos)
+
 
 # Obtenir le numéro et position de chaque fleure
 
 flower_list = {}
-count = 1
+count = 0
 for i in range(0, len(fpos)):
     pos = fpos[i]
     flower = {str(count): pos}
@@ -30,17 +32,18 @@ for i in range(0, len(fpos)):
     flower_list.update(flower)
 flower_list.update({"hive": [500, 500]})
 print(flower_list)
-print(len(flower_list))
+
 
 hive = {500: 500}
 
 flower_list.pop("hive")
 
+# Visualiser le champs
 
 def vis():
     plt.scatter(flowerPositions.keys(), flowerPositions.values(), marker="*", edgecolors="red", c="orange")
     plt.scatter(hive.keys(), hive.values(), s=100, edgecolors="yellow", c="orange")
-    plt.title("Flower Flied, with * positions of flowers")
+    plt.title("Flower Field, with * positions of flowers")
     plt.show()
 
 
@@ -50,120 +53,114 @@ grap = vis()
 
 n_population = 101
 
+# Définir la fonction qui séléctionne les parents en se basant sur leurs distances parcourus
 
-def selection(population,scores):
+def selection(scores):
     selected = []
     average = sum(scores)/len(scores)
-    for i in range(len(scores)):
+    for i in range(0,len(scores),2):
         if scores[i] < average:
-            selected.append(population[i])
+            selected.append(i)
+    parent_1 = choice(selected)
     parent_2 = choice(selected)
-    return parent_2
+    return [parent_1,parent_2]
+
+
 
 
 p_crossover = 1.0
 
-def crossover(queen, parent_2, p_crossover):
-    child =  parent_2.copy()
-    if random.random() < p_crossover:
-        point = 4
-        child = queen[:point] + parent_2[point:]
+# Définir la fonction de croisement qui réorganiser les genes des parents pour les obtenir les enfants
 
-    return [child]
+def crossover(parent_1, parent_2, p_crossover):
+    child_1 =  parent_1.copy()
+    child_2 = parent_2.copy()
+    fl_numbers_list = list(flower_list.keys())
+    value_list = list(flower_list.values())
+
+
+    if random.random() < p_crossover:
+        point = 30
+        child_1 = parent_1[:point] + parent_2[point:]
+        child_2 = parent_2[:point] + parent_1[point:]
+
+
+        passage_flowers1 = []
+        for g in child_1:
+            ind = fpos.index(g)
+            passage_flowers1.append(str(ind))
+
+        passage_flowers2 = []
+        for g in child_2:
+            ind = fpos.index(g)
+            passage_flowers2.append(str(ind))
+
+
+        child_1 = list(dict.fromkeys(passage_flowers1))
+
+
+        child_2 = list(dict.fromkeys(passage_flowers2))
+
+        difference1 = [item for item in fl_numbers_list if item not in child_1]
+        difference2 = [item for item in fl_numbers_list if item not in child_2]
+
+        child_1.extend(difference1)
+
+        child_2.extend(difference2)
+
+        final_list_1 = []
+        for i in child_1:
+            j = int(i)
+            index = value_list[j]
+            final_list_1.append(index)
+        child_1 = final_list_1
+        final_list_2 = []
+        for i in child_2:
+            j = int(i)
+            index = value_list[j]
+            final_list_2.append(index)
+        child_2 = final_list_2
+    return [child_1,child_2]
+
 
 
 r_mutation = 2.2 * 10 ** (-9)
 
 
+# Définir la fonction de mutation qui changera un des genes
+
 def mutation(bitstring, r_mutation):
     for i in range(len(bitstring)):
         if random.random() < r_mutation:
-            bitstring[i] = 1 - bitstring[i]
+            bitstring[i] = bitstring[i+1]
 
-genes = 8
-generations = 20
+
+generations = 40
 
 
 Best = []
 
-def reproduction( genes, generations, n_population, p_crossover, r_mutation):
+# Définir la classe reproduction qui produit la population initiale,
+# défini le chemin suivi par chaque abeille, calcule les distances
+# et produit les générations suivantes
+# Cette fonction va garder les meilleurs score de chauque génération et va ploter l'évolution des resultat avec les génarations
 
-    population = []
-    for b in range(n_population):
-        bts = []
-        for i in range(genes):
-            bitstring = sample(range(2), 1)
-            bts.extend(bitstring)
+def reproduction(generations, n_population, p_crossover, r_mutation):
 
-        population.append(bts)
-    dic_population = {}
-    for i in range(n_population):
-        allocate = {str(i+1):population[i]}
-        dic_population.update(allocate)
+    print("Initial population of ",n_population)
+    print("Queen doesn't forage for food, her fitness is not included")
 
+    path = []
+    for i in range(n_population - 1):
+        plist = sample(list(flower_list.values()), len(flower_list.values()))
+        path.append(plist)
 
-
-    print("Initial population of ",len(population))
-    print("Population : ")
-    for m in dic_population:
-        print(m,dic_population[m])
-
-    queen = population[0]
-    population.remove(queen)
-    print("-----------------------")
-    print("Queen doesn't forage, she is the common parent. Number of bees in the race: ", len(population))
+    print("paths: ", path)
 
     best_of = []
 
+
     for generation in range(generations):
-
-        path = []
-        for i in range(len(population)):
-            plist = sample(list(flower_list.values()), len(flower_list.values()))
-            path.append(plist)
-        print(len(path))
-        print("paths: ",path)
-
-        def visPath():
-            bee = int(input("choose the bee: "))
-            path_dict = {}
-            beePath = path[bee-1]
-
-            for i in range(len(beePath)):
-
-                if beePath[i] in flower_list.values():
-                    keys = list(flower_list.keys())
-                    values = list(flower_list.values())
-                    position = values.index(beePath[i])
-                    f = {str(keys[position]):values[position]}
-                    path_dict.update(f)
-            print("Path chosen by this bee: ", path_dict)
-
-
-
-            g = nx.Graph()
-
-            tuple_list = []
-            k_list = list(path_dict.keys())
-            for i in range(0,len(k_list)-1,2):
-                tup = (k_list[i],k_list[i+1])
-                tuple_list.append(tup)
-            g.add_edges_from(tuple_list)
-            fixed_positions = {}
-            for po in path_dict:
-                h = {int(po):tuple(path_dict[po])}
-                fixed_positions.update(h)
-            fixed_nodes = fixed_positions.keys()
-
-
-
-
-            pos = nx.spring_layout(g,pos = fixed_positions)
-
-            nx.draw_networkx(g,pos)
-            plt.show()
-
-
 
 
         fitness = []
@@ -182,13 +179,13 @@ def reproduction( genes, generations, n_population, p_crossover, r_mutation):
         print("fitness: ",fitness)
 
 
-        scores = [fitness[bee] for bee in range(n_population -1)]
+        scores = [fitness[bee] for bee in range(n_population-1)]
 
 
 
         best_evaluation = min(scores)
         best_bee = scores.index(best_evaluation)
-        best = population[best_bee]
+
         print("-----------------------")
         print("Best record: ")
         print("Generation: ",generation+1," Bee: ",best_bee+1,", distance: ",best_evaluation)
@@ -196,26 +193,28 @@ def reproduction( genes, generations, n_population, p_crossover, r_mutation):
         best_of.append(best_evaluation)
 
 
-        selected = [selection(population, scores) for _ in range(n_population-1)]
-        print("selected parents: ",selected)
-        print("Each of the selected parent will make one child with the queen ")
+        selected = [selection(scores) for _ in range(n_population-1)]
+
+
 
         children = list()
-        for i in range(0, n_population-1):
-            parent_2 = selected[i]
+        for i in range(0, n_population+-1,2):
+            parent_1 = selected[i][0]
+            parent_2 = selected[i][1]
 
-            for child in crossover(queen, parent_2, p_crossover):
+            for child in crossover(path[parent_1-1], path[parent_2-1], p_crossover):
                 mutation(child, r_mutation)
                 children.append(child)
 
 
-        population = children
-        print("Next generation has: ",len(population)+1," members, whose genes are: ",population)
-        visPath()
+
+
+
+        path = children
 
     Best.extend(best_of)
 
-play = reproduction(genes,generations,n_population,p_crossover,r_mutation)
+play = reproduction(generations,n_population,p_crossover,r_mutation)
 
 
 
