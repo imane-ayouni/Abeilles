@@ -135,10 +135,10 @@ def mutation(bitstring, r_mutation):
             bitstring[i] = bitstring[i+1]
 
 
-generations = 40
+generations = 70
 
 
-Best = []
+average = []
 
 # Définir la classe reproduction qui produit la population initiale,
 # défini le chemin suivi par chaque abeille, calcule les distances
@@ -183,14 +183,14 @@ def reproduction(generations, n_population, p_crossover, r_mutation):
 
 
 
-        best_evaluation = min(scores)
-        best_bee = scores.index(best_evaluation)
+        average_evaluation = sum(scores)/len(scores)
+
 
         print("-----------------------")
         print("Best record: ")
-        print("Generation: ",generation+1," Bee: ",best_bee+1,", distance: ",best_evaluation)
+        print("Generation: ",generation+1,", distance: ",average_evaluation)
 
-        best_of.append(best_evaluation)
+        best_of.append(average_evaluation)
 
 
         selected = [selection(scores) for _ in range(n_population-1)]
@@ -212,15 +212,14 @@ def reproduction(generations, n_population, p_crossover, r_mutation):
 
         path = children
 
-    Best.extend(best_of)
+    average.extend(best_of)
 
 play = reproduction(generations,n_population,p_crossover,r_mutation)
 
 
 
-
 def visImprovement():
-    height = [s for s in Best]
+    height = [s for s in average]
     l = []
 
     for g in range(generations):
