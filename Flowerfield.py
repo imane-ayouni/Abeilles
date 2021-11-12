@@ -1,9 +1,9 @@
 import random
-
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
-from random import sample
+from random import sample,choice
 import math
 
 # Importer le fichier excel, et définir x et y
@@ -34,6 +34,8 @@ print(len(flower_list))
 
 hive = {500: 500}
 
+flower_list.pop("hive")
+
 
 def vis():
     plt.scatter(flowerPositions.keys(), flowerPositions.values(), marker="*", edgecolors="red", c="orange")
@@ -47,63 +49,16 @@ grap = vis()
 # Obtenir les chemins aléatoires choisis par chaque abeille
 
 n_population = 101
-path = []
-flower_list.pop("hive")
-print(len(flower_list))
-for i in range(n_population - 1):
-    plist = sample(list(flower_list.values()), len(flower_list.values()))
-    path.append(plist)
-
-# Obtenir un dict qui contient le chemin parcourus par chaque abeille
-
-path_dict = {}
-for bee in range(n_population - 1):
-    pa = {str(bee + 1): path[bee]}
-    path_dict.update(pa)
-# for u in path_dict:
-# print(u,path_dict[u],"\n")
-
-# Calculer les distances parcourus par chaque abeille depuis le point de départ (hive) passant
-# par toutes les fleures et revenant en fin au hive
-
-distances = []
 
 
-def getDistance():
-    for bee in range(n_population - 1):
-
-        p = path[bee]
-        exit_distance = math.sqrt((p[0][0] - 500) ** 2 + (p[0][1] - 500) ** 2)
-        dis = []
-        for fl in range(len(p) - 1):
-            distance = math.sqrt((p[fl + 1][0] - p[fl][0]) ** 2 + (p[fl + 1][1] - p[fl][1]) ** 2)
-            dis.append(distance)
-        in_nodes_distance = sum(dis)
-        return_distance = math.sqrt((500 - p[49][0]) ** 2 + (500 - p[49][1]) ** 2)
-        total_distance = exit_distance + in_nodes_distance + return_distance
-        distances.append(total_distance)
-
-
-getDistance()
-print(len(distances))
-print(distances)
-
-
-#def fitness(bee):
- #   f = distances[bee]
-  #  return f
-scores = [distances[b] for b in range(n_population -1)]
-
-print("dskdsdskds", scores)
-
-def selection(population, scores, k=3):
-    first_selection = random.randint(0,len(population)-1)
-    second_selection = sample(range(0,len(population)-1),k-1)
-    for selec in second_selection:
-        if scores[selec] < scores[first_selection]:
-            first_selection = selec
-    return population[first_selection]
-
+def selection(population,scores):
+    selected = []
+    average = sum(scores)/len(scores)
+    for i in range(len(scores)):
+        if scores[i] < average:
+            selected.append(population[i])
+    parent_2 = choice(selected)
+    return parent_2
 
 
 p_crossover = 1.0
@@ -126,11 +81,13 @@ def mutation(bitstring, r_mutation):
             bitstring[i] = 1 - bitstring[i]
 
 genes = 8
-generations = 10
+generations = 20
 
 
+Best = []
 
-def reproduction(fitness, genes, generations, n_population, p_crossover, r_mutation):
+def reproduction( genes, generations, n_population, p_crossover, r_mutation):
+
     population = []
     for b in range(n_population):
         bts = []
@@ -139,29 +96,110 @@ def reproduction(fitness, genes, generations, n_population, p_crossover, r_mutat
             bts.extend(bitstring)
 
         population.append(bts)
+    dic_population = {}
+    for i in range(n_population):
+        allocate = {str(i+1):population[i]}
+        dic_population.update(allocate)
 
-    print("Initial population of ",len(population),"\n","Members genes: ",population)
+
+
+    print("Initial population of ",len(population))
+    print("Population : ")
+    for m in dic_population:
+        print(m,dic_population[m])
+
     queen = population[0]
-    best, best_evaluation = 0, fitness[0]
     population.remove(queen)
+    print("-----------------------")
     print("Queen doesn't forage, she is the common parent. Number of bees in the race: ", len(population))
+
+    best_of = []
 
     for generation in range(generations):
 
+        path = []
+        for i in range(len(population)):
+            plist = sample(list(flower_list.values()), len(flower_list.values()))
+            path.append(plist)
+        print(len(path))
+        print("paths: ",path)
+
+        def visPath():
+            bee = int(input("choose the bee: "))
+            path_dict = {}
+            beePath = path[bee-1]
+
+            for i in range(len(beePath)):
+
+                if beePath[i] in flower_list.values():
+                    keys = list(flower_list.keys())
+                    values = list(flower_list.values())
+                    position = values.index(beePath[i])
+                    f = {str(keys[position]):values[position]}
+                    path_dict.update(f)
+            print("Path chosen by this bee: ", path_dict)
+
+
+
+            g = nx.Graph()
+
+            tuple_list = []
+            k_list = list(path_dict.keys())
+            for i in range(0,len(k_list)-1,2):
+                tup = (k_list[i],k_list[i+1])
+                tuple_list.append(tup)
+            g.add_edges_from(tuple_list)
+            fixed_positions = {}
+            for po in path_dict:
+                h = {int(po):tuple(path_dict[po])}
+                fixed_positions.update(h)
+            fixed_nodes = fixed_positions.keys()
+
+
+
+
+            pos = nx.spring_layout(g,pos = fixed_positions)
+
+            nx.draw_networkx(g,pos)
+            plt.show()
+
+
+
+
+        fitness = []
+        for p in range(len(path)):
+            dis = path[p]
+            exit_distance = math.sqrt((dis[0][0] - 500) ** 2 + (dis[0][1] - 500) ** 2)
+            dist = []
+            for fl in range(len(dis) - 1):
+                distance = math.sqrt((dis[fl + 1][0] - dis[fl][0]) ** 2 + (dis[fl + 1][1] - dis[fl][1]) ** 2)
+                dist.append(distance)
+            in_nodes_distance = sum(dist)
+            return_distance = math.sqrt((500 - dis[49][0]) ** 2 + (500 - dis[49][1]) ** 2)
+            total_distance = exit_distance + in_nodes_distance + return_distance
+            fitness.append(total_distance)
+        print(len(fitness))
+        print("fitness: ",fitness)
+
+
         scores = [fitness[bee] for bee in range(n_population -1)]
-        print("scores " ,scores)
+
+
+
         best_evaluation = min(scores)
         best_bee = scores.index(best_evaluation)
         best = population[best_bee]
         print("-----------------------")
         print("Best record: ")
-        print("Generation: ",generation," Bee: ", best," distance: ",best_evaluation)
+        print("Generation: ",generation+1," Bee: ",best_bee+1,", distance: ",best_evaluation)
+
+        best_of.append(best_evaluation)
 
 
+        selected = [selection(population, scores) for _ in range(n_population-1)]
+        print("selected parents: ",selected)
+        print("Each of the selected parent will make one child with the queen ")
 
-
-        selected = [selection(population, scores) for _ in range(n_population)]
-        print("Selected parents: ",selected)
         children = list()
         for i in range(0, n_population-1):
             parent_2 = selected[i]
@@ -172,9 +210,32 @@ def reproduction(fitness, genes, generations, n_population, p_crossover, r_mutat
 
 
         population = children
-        print("Next generation: ",population)
-    print([best, best_evaluation])
+        print("Next generation has: ",len(population)+1," members, whose genes are: ",population)
+        visPath()
 
-reproduction(distances,genes,generations,n_population,p_crossover,r_mutation)
+    Best.extend(best_of)
+
+play = reproduction(genes,generations,n_population,p_crossover,r_mutation)
+
+
+
+
+def visImprovement():
+    height = [s for s in Best]
+    l = []
+
+    for g in range(generations):
+        n = str(g+1)
+        l.append(n)
+    bars = tuple(l)
+
+    y_pos = np.arange(len(bars))
+    plt.bar(y_pos,height)
+    plt.xticks(y_pos,bars)
+    plt.show()
+
+
+
+visImprovement()
 
 
