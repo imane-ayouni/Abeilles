@@ -1,4 +1,6 @@
 Un arbre, des fleurs et des abeilles ...
+
+
 Un colonie d’abeilles a construit sa ruche dans un arbre, un pommier sauvage, qui trône
 au beau milieu d’un champ de fleurs mellifères, un mélange de pissenlits et de sauges
 des prés.
